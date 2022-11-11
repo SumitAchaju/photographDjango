@@ -1,0 +1,1 @@
+activate.bat && cd ../.. && python manage.py runserver
