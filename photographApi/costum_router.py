@@ -1,7 +1,7 @@
 from django.urls import path
 from Follow.views import UserFriend,FriendPosts
 from Account.views import RegisterView
-from Post.views import PostCategory,SinglePost,AddComment,DeleteComment,PostLikes
+from Post.views import PostCategory,SinglePost,AddComment,DeleteComment,PostLikes,PostLikesOut
 
 
 urlpatterns = [
@@ -13,4 +13,5 @@ urlpatterns = [
     path("addcomment/<pk>",AddComment),
     path("deletecomment/<pk>",DeleteComment),
     path("postlike/<pk>",PostLikes),
+    path("postlikeout/<pk>",PostLikesOut),
 ]

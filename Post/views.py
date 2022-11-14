@@ -72,3 +72,18 @@ def PostLikes(request,pk):
         post.save()
         return Response(PostSerializer(post).data)
 
+@api_view(["GET","POST"])
+@permission_classes([permissions.IsAuthenticated])
+def PostLikesOut(request,pk):
+    if request.method == "GET":
+        post = Post.objects.get(id=pk)
+        post.like_by.add(request.user)
+        post.save()
+        allpost = Post.objects.all().order_by("post_date")
+        return Response(PostSerializer(allpost,many=True).data)
+    if request.method == "POST":
+        post = Post.objects.get(id=pk)
+        post.like_by.remove(request.user)
+        post.save()
+        allpost = Post.objects.all().order_by("post_date")
+        return Response(PostSerializer(allpost,many=True).data)
