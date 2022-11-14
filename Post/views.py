@@ -44,4 +44,31 @@ def AddComment(request,pk):
         new_comment = Comment(comment_by=user,comment=comment)
         new_comment.save()
         post.comment.add(new_comment)
-        return Response({"status":"success"})
+        post.save()
+        return Response(PostSerializer(post).data)
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def DeleteComment(request,pk):
+    if request.method == "POST":
+        comment = Comment.objects.get(id=pk)
+        comment.delete()
+        post = Post.objects.get(id=request.data["postid"])
+        return Response(PostSerializer(post).data)
+
+
+@api_view(["GET","POST"])
+@permission_classes([permissions.IsAuthenticated])
+def PostLikes(request,pk):
+    if request.method == "GET":
+        post = Post.objects.get(id=pk)
+        post.like_by.add(request.user)
+        post.save()
+        return Response(PostSerializer(post).data)
+    if request.method == "POST":
+        post = Post.objects.get(id=pk)
+        post.like_by.remove(request.user)
+        post.save()
+        return Response(PostSerializer(post).data)
+

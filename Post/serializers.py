@@ -12,7 +12,7 @@ class CommentSerializer(serializers.ModelSerializer):
     comment_by = UserSerializer(read_only=True)
     class Meta:
         model = Comment
-        fields = ["comment_by","comment"]
+        fields = ["id","comment_by","comment"]
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
