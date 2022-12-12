@@ -1,7 +1,7 @@
 from django.urls import path
-from Follow.views import UserFriend,FriendPosts,UserFollowFollowing
-from Account.views import RegisterView
-from Post.views import PostCategory,SinglePost,AddComment,DeleteComment,PostLikes,PostLikesOut,UserPost
+from Follow.views import UserFriend,FriendPosts,UserFollowFollowing,FriendSuggestion,AddFriend,RemoveFriend
+from Account.views import RegisterView,UpdateProfile,ChangePassword
+from Post.views import PostCategory,SinglePost,AddComment,DeleteComment,PostLikes,PostLikesOut,UserPost,UploadPost,UpdatePost,DeletePost,PostSaved
 
 
 urlpatterns = [
@@ -16,4 +16,13 @@ urlpatterns = [
     path("postlikeout/<pk>",PostLikesOut),
     path("userpost/<pk>",UserPost),
     path("userfollowfollowing/<pk>",UserFollowFollowing),
+    path("followsuggestion/",FriendSuggestion),
+    path("addfriend/<pk>",AddFriend),
+    path("removefriend/<pk>",RemoveFriend),
+    path("updateprofile/",UpdateProfile),
+    path("changepassword/",ChangePassword),
+    path("uploadpost/",UploadPost),
+    path("updatepost/<pk>",UpdatePost),
+    path("deletepost/<pk>",DeletePost),
+    path("savedpost/",PostSaved),
 ]

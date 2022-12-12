@@ -25,6 +25,7 @@ class PostSerializer(serializers.ModelSerializer):
     like_by = UserSerializer(many=True,read_only=True)
     comment = CommentSerializer(many=True,read_only=True)
     category = CategorySerializer(many=True,read_only=True)
+    saved_by = UserSerializer(many=True,read_only=True)
     class Meta:
         model = Post
         fields = '__all__'

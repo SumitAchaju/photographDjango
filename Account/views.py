@@ -1,9 +1,8 @@
-from rest_framework import viewsets,status,permissions
+from rest_framework import viewsets,permissions
 from rest_framework.response import Response
-from .serializers import UserSerializer,RegisterSerializer
+from .serializers import UserSerializer,RegisterSerializer,UpdatePassword
 from .models import User
-from django.contrib import auth
-from rest_framework.authtoken.models import Token
+from rest_framework.decorators import api_view,permission_classes
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -22,3 +21,31 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (permissions.AllowAny,)
     serializer_class = RegisterSerializer
+
+@api_view(["PATCH"])
+@permission_classes([permissions.IsAuthenticated])
+def UpdateProfile(request):
+    user = User.objects.get(id=request.user.id)
+    serilizer = UserSerializer(user,data=request.data,partial=True)
+    if User.objects.exclude(id=request.user.id).filter(email=request.data["email"]):
+        return Response({"status":"email exists"})
+    if serilizer.is_valid():
+        serilizer.save()
+        return Response({"status":"success"})
+    else:
+        return Response({"status":"error"})
+
+@api_view(["PATCH"])
+@permission_classes([permissions.IsAuthenticated])
+def ChangePassword(request):
+    user = User.objects.get(id=request.user.id)
+    if user.check_password(request.data["current_password"]):
+        serilizer = UpdatePassword(user,data=request.data,partial=True)
+        if serilizer.is_valid():
+            user.set_password(request.data["password"])
+            user.save()
+            return Response({"status":"success"})
+        else:
+            return Response({"status":"Invalid_password"})
+    else:
+        return Response({"status":"wrong_current_password"})

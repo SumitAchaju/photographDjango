@@ -1,4 +1,3 @@
-from unicodedata import category
 from django.db import models
 from Account.models import User
 
@@ -30,7 +29,8 @@ class Post(models.Model):
     like_by = models.ManyToManyField(User,related_name="like_users",blank=True)
     comment = models.ManyToManyField(Comment,related_name="comments",blank=True)
     post_date = models.DateTimeField(null=True,blank=True)
-    category = models.ManyToManyField(Category,default=1)
+    category = models.ManyToManyField(Category)
+    saved_by = models.ManyToManyField(User,blank=True)
 
     def __str__(self):
         return self.user.username

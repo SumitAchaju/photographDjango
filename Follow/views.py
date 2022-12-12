@@ -24,11 +24,13 @@ def UserFriend(request):
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def FriendPosts(request):
-    friends = Friend.objects.filter(user=request.user.id).order_by("-id")
-    friend_id = []
-    for friend in friends:
-        friend_id.append(friend.friends.id)
-    friend_posts = Post.objects.filter(user__in=list(friend_id)).order_by("post_date")
+    friends = Friend.objects.get(user=request.user.id)
+    friend_id = [request.user.id]
+    for friend in friends.following.all():
+        friend_id.append(friend.id)
+    for friend in friends.mutual.all():
+        friend_id.append(friend.id)
+    friend_posts = Post.objects.filter(user__in=list(friend_id)).order_by("-id")
     serializer = PostSerializer(friend_posts,many=True)
     return Response(serializer.data)
 
@@ -36,10 +38,148 @@ def FriendPosts(request):
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def UserFollowFollowing(request,pk):
-    follow = Friend.objects.filter(user=pk).filter(Q(category="Mutual") | Q(category="Follow")).order_by("-id")
-    following = Friend.objects.filter(user=pk).filter(Q(category="Mutual") | Q(category="Following")).order_by("-id")
-    user = User.objects.get(id=pk)
-    userserializer = UserSerializer(user,many=False)
-    followserializer = AllFriend(follow,many=True)
-    followingserializer = AllFriend(following,many=True)
-    return Response({"follow":followserializer.data,"following":followingserializer.data,"user":userserializer.data})
+    userfriend = Friend.objects.get(user=pk)
+    myfriend = Friend.objects.get(user=request.user)
+    userfriendserializer = AllFriend(userfriend)
+    for friend in userfriendserializer.data['followers']:
+        if myfriend.following.filter(id=friend["id"]):
+            friend["myfriend_status"] = True
+        elif myfriend.mutual.filter(id=friend["id"]):
+            friend["myfriend_status"] = True
+        else:
+            friend["myfriend_status"] = False
+    for friend in userfriendserializer.data['following']:
+        if myfriend.following.filter(id=friend["id"]):
+            friend["myfriend_status"] = True
+        elif myfriend.mutual.filter(id=friend["id"]):
+            friend["myfriend_status"] = True
+        else:
+            friend["myfriend_status"] = False
+    for friend in userfriendserializer.data['mutual']:
+        if myfriend.following.filter(id=friend["id"]):
+            friend["myfriend_status"] = True
+        elif myfriend.mutual.filter(id=friend["id"]):
+            friend["myfriend_status"] = True
+        else:
+            friend["myfriend_status"] = False
+
+
+    return Response({"userfriend":userfriendserializer.data})
+
+
+@api_view(["POST","GET"])
+@permission_classes([permissions.IsAuthenticated])
+def FriendSuggestion(request):
+    if request.method == "GET":
+        user = User.objects.exclude(id=request.user.id).order_by("-id")
+
+        mutualfriend = []
+        for following in Friend.objects.get(user__id=request.user.id).following.all():
+            mutualfriend.append(following)
+        for mutual in Friend.objects.get(user__id=request.user.id).mutual.all():
+            mutualfriend.append(mutual)
+
+        userdata =UserSerializer(user,many=True).data
+
+        i=0
+        for u in user:
+            mutual= Friend.objects.get(user__id=u.id)
+            for friend in mutualfriend:
+                if friend.id == u.id:
+                    userdata[i]["myfriend"]=True
+                    break
+            else:
+                userdata[i]["myfriend"]=False
+            for friend in mutualfriend:
+                if mutual.followers.filter(id=friend.id):
+                    userdata[i]["mutual_friend"]=f'{friend.first_name} {friend.last_name}'
+                    break
+                elif mutual.mutual.filter(id=friend.id):
+                    userdata[i]["mutual_friend"]=f'{friend.first_name} {friend.last_name}'
+                    break
+                else:
+                    userdata[i]["mutual_friend"]="no friends"
+            else:
+                userdata[i]["mutual_friend"]="no friends"
+
+            userdata[i]["followers"] = len(mutual.followers.all())+len(mutual.mutual.all())
+            userdata[i]["following"] = len(mutual.following.all())+len(mutual.mutual.all())
+            
+
+            i += 1
+        return Response({"user":userdata})
+
+
+    if request.method == "POST":
+        user = User.objects.filter(name__icontains=request.data["searchname"]).order_by("-id")
+        mutualfriend = []
+        for following in Friend.objects.get(user__id=request.user.id).following.all():
+            mutualfriend.append(following)
+        for mutual in Friend.objects.get(user__id=request.user.id).mutual.all():
+            mutualfriend.append(mutual)
+
+        userdata =UserSerializer(user,many=True).data
+
+        i=0
+        for u in user:
+            mutual= Friend.objects.get(user__id=u.id)
+            for friend in mutualfriend:
+                if friend.id == u.id:
+                    userdata[i]["myfriend"]=True
+                    break
+            else:
+                userdata[i]["myfriend"]=False
+
+            for friend in mutualfriend:
+                if mutual.followers.filter(id=friend.id):
+                    userdata[i]["mutual_friend"]=f'{friend.first_name} {friend.last_name}'
+                    break
+                elif mutual.mutual.filter(id=friend.id):
+                    userdata[i]["mutual_friend"]=f'{friend.first_name} {friend.last_name}'
+                    break
+                else:
+                    userdata[i]["mutual_friend"]="no friends"
+            else:
+                userdata[i]["mutual_friend"]="no friends"
+
+            userdata[i]["followers"] = len(mutual.followers.all())+len(mutual.mutual.all())
+            userdata[i]["following"] = len(mutual.following.all())+len(mutual.mutual.all())
+            
+
+            i += 1
+        return Response({"user":userdata})
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def AddFriend(request,pk):
+    myfriend = Friend.objects.get(user__id=request.user.id)
+    otherfriend = Friend.objects.get(user__id=pk)
+    addedfriend = User.objects.get(id=pk)
+    if myfriend.followers.filter(id=pk):
+        if otherfriend.following.filter(id=request.user.id):
+            otherfriend.following.remove(request.user)
+            otherfriend.mutual.add(request.user)
+        myfriend.followers.remove(addedfriend)
+        myfriend.mutual.add(addedfriend)
+    else:
+        myfriend.following.add(addedfriend)
+        otherfriend.followers.add(request.user)
+    return Response({"status":"success"})
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def RemoveFriend(request,pk):
+    myfriend = Friend.objects.get(user__id=request.user.id)
+    otherfriend = Friend.objects.get(user__id=pk)
+    addedfriend = User.objects.get(id=pk)
+    if myfriend.following.filter(id=pk):
+        otherfriend.followers.remove(request.user)
+        myfriend.following.remove(addedfriend)
+    else:
+        myfriend.mutual.remove(addedfriend)
+        otherfriend.mutual.remove(request.user)
+        myfriend.followers.add(addedfriend)
+        otherfriend.following.add(request.user)
+    return Response({"status":"success"})
+
+    

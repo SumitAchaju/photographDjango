@@ -1,9 +1,10 @@
 from rest_framework import permissions,viewsets
 from .serializers import PostSerializer,CategorySerializer
-from .models import Post,Category,Comment
+from .models import Post,Category,Comment,PostImage
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
 from Account.models import User
+from datetime import datetime,timezone
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all().order_by("-id")
@@ -18,10 +19,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def PostCategory(request,pk):
-    if pk == 1:
-        posts = Post.objects.all().order_by("post_date")
+    if int(pk) == 1:
+        posts = Post.objects.all().order_by("-id")
     else:
-        posts = Post.objects.filter(category=pk).order_by("post_date")
+        posts = Post.objects.filter(category=pk).order_by("-id")
     serializer = PostSerializer(posts,many=True)
     return Response(serializer.data)
 
@@ -80,9 +81,19 @@ def PostLikesOut(request,pk):
         post.like_by.add(request.user)
         post.save()
         return Response({"status":"success"})
-    if request.data["action"] == "unlike":
+    elif request.data["action"] == "unlike":
         post = Post.objects.get(id=pk)
         post.like_by.remove(request.user)
+        post.save()
+        return Response({"status":"success"})
+    elif request.data["action"] == "save":
+        post = Post.objects.get(id=pk)
+        post.saved_by.add(request.user)
+        post.save()
+        return Response({"status":"success"})
+    elif request.data["action"] == "unsave":
+        post = Post.objects.get(id=pk)
+        post.saved_by.remove(request.user)
         post.save()
         return Response({"status":"success"})
 
@@ -90,6 +101,65 @@ def PostLikesOut(request,pk):
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def UserPost(request,pk):
-    posts= Post.objects.filter(user__id=pk)
+    posts= Post.objects.filter(user__id=pk).order_by("-id")
     serializer = PostSerializer(posts,many=True)
     return Response(serializer.data)
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def UploadPost(request):
+    uploadedpost = Post(user=request.user,caption=request.data["discription"],post_date=datetime.now().replace(tzinfo=timezone.utc))
+    uploadedpost.save()
+    category = request.data.getlist("category[]")
+    if "1" in category:
+        for cat in category:
+            uploadedpost.category.add(Category.objects.get(id=int(cat)))
+    else:
+        for cat in category:
+            uploadedpost.category.add(Category.objects.get(id=int(cat)))
+        uploadedpost.category.add(Category.objects.get(id=1))
+    for image in (request.FILES.getlist("images[]")):
+        postimage = PostImage(image=image)
+        postimage.save()
+        uploadedpost.postimage.add(postimage)
+    return Response({"status":"success","postid":uploadedpost.id})
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def UpdatePost(request,pk):
+    post = Post.objects.get(id=pk)
+    if post.user.id==request.user.id:
+        post.caption=request.data["discription"]
+        post.save()
+        category = request.data["category"]
+        if "1" in category:
+            for cat in category:
+                post.category.add(Category.objects.get(id=int(cat)))
+        else:
+            for cat in category:
+                post.category.add(Category.objects.get(id=int(cat)))
+                post.category.add(Category.objects.get(id=1))
+        return Response({"status":"success","postid":post.id})
+    else:
+        return Response({"status":"invalid"})
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def DeletePost(request,pk):
+    post = Post.objects.get(id=pk)
+    if post.user.id==request.user.id:
+        postdelete = Post.objects.get(id=pk)
+        if postdelete.postimage:
+            for post in postdelete.postimage.all():
+                post.image.delete()
+                post.delete()
+        postdelete.delete()
+        return Response({"status":"success"})
+    else:
+        return Response({"status":"invalid"})
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def PostSaved(request):
+    post = Post.objects.filter(saved_by=request.user)
+    return Response(PostSerializer(post,many=True).data)
