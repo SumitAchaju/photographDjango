@@ -1,3 +1,5 @@
 from django.contrib import admin
+from .models import ImprovementSuggestions,FeedBack
 
-# Register your models here.
+admin.site.register(ImprovementSuggestions)
+admin.site.register(FeedBack)

@@ -43,10 +43,8 @@ INSTALLED_APPS = [
 
     'Account',
     'Follow',
-    'Group',
     'More',
     'Post',
-    'Suggestion',
 
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
