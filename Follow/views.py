@@ -31,8 +31,13 @@ def FriendPosts(request):
     for friend in friends.mutual.all():
         friend_id.append(friend.id)
     friend_posts = Post.objects.filter(user__in=list(friend_id)).order_by("-id")
-    serializer = PostSerializer(friend_posts,many=True)
-    return Response(serializer.data)
+    total = len(friend_posts)
+    if int(request.query_params.get("level")) < total:
+        serializer = PostSerializer(friend_posts,many=True).data[:int(request.query_params.get('level'))]
+    else:
+        serializer = PostSerializer(friend_posts,many=True).data[:total]
+
+    return Response({"post":serializer,"results":total})
 
 
 @api_view(["GET"])

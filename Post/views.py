@@ -23,8 +23,13 @@ def PostCategory(request,pk):
         posts = Post.objects.all().order_by("-id")
     else:
         posts = Post.objects.filter(category=pk).order_by("-id")
-    serializer = PostSerializer(posts,many=True)
-    return Response(serializer.data)
+    total = len(posts)
+    if int(request.query_params.get("level")) < total:
+        serializer = PostSerializer(posts,many=True).data[:int(request.query_params.get('level'))]
+    else:
+        serializer = PostSerializer(posts,many=True).data[:total]
+
+    return Response({"post":serializer,"results":total})
 
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
@@ -102,8 +107,13 @@ def PostLikesOut(request,pk):
 @permission_classes([permissions.IsAuthenticated])
 def UserPost(request,pk):
     posts= Post.objects.filter(user__id=pk).order_by("-id")
-    serializer = PostSerializer(posts,many=True)
-    return Response(serializer.data)
+    total = len(posts)
+    if int(request.query_params.get("level")) < total:
+        serializer = PostSerializer(posts,many=True).data[:int(request.query_params.get('level'))]
+    else:
+        serializer = PostSerializer(posts,many=True).data[:total]
+
+    return Response({"post":serializer,"results":total})
 
 @api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
@@ -161,5 +171,11 @@ def DeletePost(request,pk):
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def PostSaved(request):
-    post = Post.objects.filter(saved_by=request.user)
-    return Response(PostSerializer(post,many=True).data)
+    posts = Post.objects.filter(saved_by=request.user)
+    total = len(posts)
+    if int(request.query_params.get("level")) < total:
+        serializer = PostSerializer(posts,many=True).data[:int(request.query_params.get('level'))]
+    else:
+        serializer = PostSerializer(posts,many=True).data[:total]
+
+    return Response({"post":serializer,"results":total})
